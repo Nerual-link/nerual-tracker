@@ -184,6 +184,7 @@ a{color:var(--accent);text-decoration:none}
     <div class="modal-handle"></div>
     <h3 id="modalTitle"></h3>
     <div id="modalBody"></div>
+    <button id="modalCopyBtn" style="width:100%;margin-top:16px;padding:14px;border:none;border-radius:12px;background:var(--accent);color:var(--bg);font-size:.9rem;font-weight:700;cursor:pointer">📋 Copy Day Report</button>
   </div>
 </div>
 
@@ -522,7 +523,30 @@ document.getElementById('calNext').addEventListener('click', () => {
 });
 
 // ============ DAY DETAIL MODAL ============
+function generateDayReport(key) {
+  const data = loadDay(key);
+  const { checked, total, pct } = dayScore(data);
+  const { current } = calcStreaks();
+  let text = `nerual \u2014 ${formatDate(key)}\n`;
+  text += `Score: ${pct}% (${checked}/${total})\n`;
+  text += `Streak: ${current} days\n`;
+  text += `${'='.repeat(30)}\n\n`;
+  SECTIONS.forEach(section => {
+    text += `${section.emoji} ${section.title}\n`;
+    section.items.forEach(item => {
+      const k = `${section.id}:${item}`;
+      text += `  ${data[k] ? '\u2705' : '\u274C'} ${item}\n`;
+    });
+    text += '\n';
+  });
+  text += `${'='.repeat(30)}`;
+  return text;
+}
+
+let currentModalKey = null;
+
 function showDayModal(key) {
+  currentModalKey = key;
   const data = loadDay(key);
   const { checked, total, pct } = dayScore(data);
   document.getElementById('modalTitle').textContent = `${formatDate(key)} \u2014 ${pct}%`;
@@ -544,6 +568,21 @@ function showDayModal(key) {
   });
   document.getElementById('modal').classList.add('open');
 }
+
+document.getElementById('modalCopyBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!currentModalKey) return;
+  const text = generateDayReport(currentModalKey);
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Copied to clipboard!');
+  });
+});
 
 document.getElementById('modal').addEventListener('click', e => {
   if (e.target.id === 'modal') document.getElementById('modal').classList.remove('open');
